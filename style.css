@@ -1,5 +1,14 @@
-this is my test branch
-
+/* Floating Action Button Hover Effect */
+.floating-action-btn {
+    box-shadow: 0 4px 12px hsl(var(--primary) / 0.18);
+    transform: translateY(0);
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+.floating-action-btn:hover {
+    box-shadow: 0 8px 24px hsl(var(--primary) / 0.28);
+    transform: translateY(-4px) scale(1.04);
+    filter: brightness(1.08);
+}
 :root {
     --background: 60 9% 98%;
     --foreground: 120 15% 15%;

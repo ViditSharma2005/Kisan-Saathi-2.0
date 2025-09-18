@@ -554,6 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentLanguage = 'en';
     let translations = {};
 
+    // Fetch translation JSON and update the page
     const fetchTranslations = async (lang) => {
         try {
             const response = await fetch(`languages/${lang}.json`);
@@ -568,6 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Replace all [data-key] elements with translation
     const translatePage = () => {
         document.querySelectorAll('[data-key]').forEach(element => {
             const key = element.getAttribute('data-key');
@@ -582,6 +584,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
     
+    // Set language and update UI
     const setLanguage = (lang) => {
         currentLanguage = lang;
         fetchTranslations(lang);
