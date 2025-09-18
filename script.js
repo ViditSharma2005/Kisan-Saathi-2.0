@@ -527,24 +527,6 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeAnotherButton.addEventListener('click', resetForNewAnalysis);
     };
 
-    // --- UTILITY & HELPER FUNCTIONS ---
-    const showMessageModal = (title, message) => {
-        const modal = document.getElementById('messageModal');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalMessage = document.getElementById('modalMessage');
-        if(modal && modalTitle && modalMessage) {
-            modalTitle.textContent = title;
-            modalMessage.textContent = message;
-            modal.style.display = 'flex';
-        }
-    };
-    
-    const fileToBase64 = (file) => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
     
     // --- MULTILINGUAL SUPPORT ---
     const langBtnEn = document.getElementById('lang-btn-en');
@@ -574,12 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-key]').forEach(element => {
             const key = element.getAttribute('data-key');
             if (translations[key]) {
-                const textSpan = element.querySelector('span.hidden.sm\\:inline');
-                if (textSpan) {
-                     textSpan.textContent = translations[key];
-                } else {
-                     element.textContent = translations[key];
-                }
+                element.innerHTML = translations[key];
             }
         });
     };
