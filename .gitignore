@@ -1,3 +1,4 @@
 # Ignore Check file folder
 Check file/
-.git
+.git/
+node_modules/

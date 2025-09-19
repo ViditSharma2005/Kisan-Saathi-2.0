@@ -8,6 +8,7 @@ const ICONS = {
     shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>`,
     bell: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>`,
     upload: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>`,
+    chatbot: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>`
 };
 
 // --- Mock Data (Now with data-keys for translation) ---
@@ -15,7 +16,7 @@ const MOCK_FEATURES = [
     { icon: ICONS.cloudSun, dataKeyTitle: "feature_weather_title", dataKeyDesc: "feature_weather_desc", points: ["Live IMD weather data", "7-day accurate forecasts", "Drought & flood alerts", "Satellite imagery"], colorClass: 'sky-blue' },
     { icon: ICONS.trendingUp, dataKeyTitle: "feature_market_title", dataKeyDesc: "feature_market_desc", points: ["Real-time mandi rates", "Price trend analysis", "Demand forecasting", "Best selling locations"], colorClass: 'success' },
     { icon: ICONS.camera, dataKeyTitle: "feature_pest_title", dataKeyDesc: "feature_pest_desc", points: ["Instant photo diagnosis", "Treatment recommendations", "Prevention strategies", "Expert consultation"], colorClass: 'primary' },
-    { icon: ICONS.sprout, dataKeyTitle: "feature_advisory_title", dataKeyDesc: "feature_advisory_desc", points: ["Soil-based suggestions", "Fertilizer planning", "Crop rotation advice", "Yield optimization"], colorClass: 'earth-brown' },
+    { icon: ICONS.chatbot, dataKeyTitle: "feature_advisory_title", dataKeyDesc: "feature_advisory_desc", points: ["Ask farming questions", "Get instant AI advice", "Personalized guidance", "24/7 availability"], colorClass: 'earth-brown' },
     { icon: ICONS.users, dataKeyTitle: "feature_language_title", dataKeyDesc: "feature_language_desc", points: ["Voice commands", "Hindi interface", "Regional languages", "Audio guidance"], colorClass: 'warning' },
     { icon: ICONS.shield, dataKeyTitle: "feature_offline_title", dataKeyDesc: "feature_offline_desc", points: ["Offline functionality", "Local data storage", "Auto-sync when online", "SMS alerts backup"], colorClass: 'destructive' },
 ];
@@ -53,6 +54,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeTab = 'overview';
     let isPestDetectionInitialized = false;
     let isWeatherInitialized = false;
+    let isAdvisoryInitialized = false;
+    // ADD THIS NEW STATE VARIABLE
+    let isProfileInitialized = false;
+
 
     // --- Functions ---
     const showDashboard = () => {
@@ -96,6 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTab = tab;
             updateTabs();
 
+            // ADD THIS BLOCK TO INITIALIZE THE PROFILE TAB
+            if (tab === 'profile' && !isProfileInitialized) {
+                initializeProfileTab(); // This function is in profile.js
+                isProfileInitialized = true;
+            }
             if (tab === 'pest' && !isPestDetectionInitialized) {
                 initializePestDetection();
                 isPestDetectionInitialized = true;
@@ -103,6 +113,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tab === 'weather' && !isWeatherInitialized) {
                 initializeWeather();
                 isWeatherInitialized = true;
+            }
+            if (tab === 'advisory' && !isAdvisoryInitialized) {
+                initializeAdvisoryChatbot();
+                isAdvisoryInitialized = true;
             }
         }
     };
@@ -164,16 +178,16 @@ document.addEventListener('DOMContentLoaded', () => {
             card.addEventListener('click', () => {
                 activeTab = card.dataset.actionTab;
                 updateTabs();
+                 // Manually trigger initialization if the profile tab is clicked from the overview
+                if (activeTab === 'profile' && !isProfileInitialized) {
+                    initializeProfileTab();
+                    isProfileInitialized = true;
+                }
             });
         });
     };
 
-    const renderProfile = () => {
-        document.getElementById('profile-content').innerHTML = `<div class="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 class="text-xl font-bold mb-4" data-key="tab_profile">Profile</h3>
-            <p>This is where the farmer's profile management form would go.</p>
-        </div>`;
-    };
+    
 
     const renderMarket = () => {
         document.getElementById('market-content').innerHTML = `
@@ -191,13 +205,6 @@ document.addEventListener('DOMContentLoaded', () => {
                    </div>
                 </div>
             </div>`;
-    };
-
-    const renderAdvisory = () => {
-        document.getElementById('advisory-content').innerHTML = `<div class="rounded-lg border bg-white p-6 shadow-sm">
-            <h3 class="text-xl font-bold mb-4" data-key="feature_advisory_title">Crop Advisory</h3>
-            <p>This section would display personalized crop advice.</p>
-        </div>`;
     };
 
     // --- WEATHER LOGIC ---
@@ -593,6 +600,126 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeAnotherButton.addEventListener('click', resetForNewAnalysis);
     };
 
+    // --- ADVISORY CHATBOT LOGIC ---
+    const renderAdvisory = () => {
+        const container = document.getElementById('advisory-content');
+        container.innerHTML = `
+        <div class="rounded-lg border bg-white shadow-sm h-[70vh] flex flex-col">
+            <div class="p-4 border-b">
+                <h3 class="text-xl font-bold" data-key="chatbot_title">AI Farming Assistant</h3>
+                <p class="text-sm text-gray-500" data-key="chatbot_subtitle">Ask me anything about farming</p>
+            </div>
+            <div id="chatbot-messages" class="flex-1 p-6 space-y-2 overflow-y-auto">
+                <!-- Messages will be injected here -->
+            </div>
+            <div class="p-4 border-t bg-gray-50">
+                <div id="chatbot-input-container" class="flex items-center gap-2">
+                    <input type="text" id="chatbot-input" class="flex-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2" placeholder="Ask a question..." data-key-placeholder="chatbot_placeholder" disabled>
+                    <button id="chatbot-send" class="gradient-primary text-white font-medium py-2 px-4 rounded-lg" disabled>Send</button>
+                </div>
+            </div>
+        </div>
+        `;
+    };
+
+    const initializeAdvisoryChatbot = () => {
+        const messagesContainer = document.getElementById('chatbot-messages');
+        const input = document.getElementById('chatbot-input');
+        const sendButton = document.getElementById('chatbot-send');
+        let chatHistory = [];
+        const GEMINI_API_KEY = "AIzaSyD8iaASId8LbP-_vwrdO-zyf29umvk3Q7c";
+
+        const addMessage = (sender, message, isHtml = false) => {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('chat-message', `chat-message-${sender}`);
+            const contentElement = document.createElement('div');
+            contentElement.classList.add('chat-bubble');
+            if (isHtml) {
+                contentElement.innerHTML = message;
+            } else {
+                contentElement.textContent = message;
+            }
+            messageWrapper.appendChild(contentElement);
+            messagesContainer.appendChild(messageWrapper);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            return messageWrapper;
+        };
+
+        const displayWelcomeMessage = () => {
+            const welcomeKey = 'chatbot_welcome';
+            const welcomeText = translations[welcomeKey] || "Hello! I am your AI Farming Assistant. Ask me anything about crops, soil, pests, or market prices.";
+            addMessage('ai', welcomeText);
+            input.disabled = false;
+            sendButton.disabled = false;
+            input.focus();
+        };
+
+        const handleSend = async () => {
+            const userMessage = input.value.trim();
+            if (!userMessage) return;
+
+            addMessage('user', userMessage);
+            input.value = '';
+            input.disabled = true;
+            sendButton.disabled = true;
+
+            const typingIndicator = addMessage('ai', '<div class="typing-indicator"><span></span><span></span><span></span></div>', true);
+
+            if (!GEMINI_API_KEY) {
+                const errorKey = 'chatbot_error_apikey';
+                const errorText = translations[errorKey] || "AI Chatbot is unavailable. Please configure the API Key.";
+                typingIndicator.querySelector('.chat-bubble').innerHTML = errorText;
+                return;
+            }
+
+            try {
+                const systemInstruction = `You are "Kisan Saathi," an expert AI agricultural advisor for Indian farmers. Provide concise, helpful, and easy-to-understand advice. Keep the conversation history in mind.`;
+                chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
+
+                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+                const requestBody = {
+                    contents: chatHistory,
+                    systemInstruction: { parts: [{ text: systemInstruction }] }
+                };
+
+                const response = await fetch(geminiApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
+
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+
+                const data = await response.json();
+                const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                typingIndicator.remove();
+
+                if (aiResponse) {
+                    addMessage('ai', aiResponse);
+                    chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
+                } else {
+                    addMessage('ai', 'Sorry, I could not process your request.');
+                }
+
+            } catch (error) {
+                typingIndicator.remove();
+                addMessage('ai', `An error occurred: ${error.message}`);
+                console.error("Chatbot error:", error);
+            } finally {
+                input.disabled = false;
+                sendButton.disabled = false;
+                input.focus();
+            }
+        };
+
+        sendButton.addEventListener('click', handleSend);
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSend();
+            }
+        });
+
+        displayWelcomeMessage();
+        translatePage(); // To apply placeholder text
+    };
+
     
     // --- MULTILINGUAL SUPPORT ---
     const langBtnEn = document.getElementById('lang-btn-en');
@@ -623,6 +750,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const key = element.getAttribute('data-key');
             if (translations[key]) {
                 element.innerHTML = translations[key];
+            }
+        });
+        document.querySelectorAll('[data-key-placeholder]').forEach(element => {
+            const key = element.getAttribute('data-key-placeholder');
+            if (translations[key]) {
+                element.placeholder = translations[key];
             }
         });
     };
@@ -662,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialize = () => {
         renderFeatures();
         renderOverview();
-        renderProfile();
+        // renderProfile(); // REMOVED: This is now handled on tab click
         renderWeather();
         renderMarket();
         renderAdvisory();
