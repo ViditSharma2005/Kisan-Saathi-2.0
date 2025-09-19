@@ -495,15 +495,81 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const displayAnalysisResults = (data) => {
             const resultsContainer = document.getElementById('pestAnalysisResults');
-            const getSeverityClass = (severity) => (severity?.toLowerCase()?.includes('high') ? 'high-severity' : severity?.toLowerCase()?.includes('low') ? 'low-severity' : 'healthy');
             resultsContainer.innerHTML = `
-                <div class="result-summary-card"><h4>Analysis Summary</h4><p>${data.summary || 'Summary not available.'}</p></div>
-                <div class="result-card"><h4 class="${getSeverityClass(data.health_status)}">Overall Health: ${data.health_status}</h4><p><strong>Plant Identified as:</strong> ${data.plant_identification || 'Unknown'}</p></div>
-                ${data.pest_detection?.has_pests ? `<div class="result-card"><h4 class="high-severity">Pest Detected: ${data.pest_detection.severity} Severity</h4>${data.pest_detection.details.map(p => `<p><strong>${p.name}:</strong> ${p.description}</p>`).join('')}</div>` : ''}
-                ${data.disease_detection?.has_diseases ? `<div class="result-card"><h4 class="high-severity">Disease Detected: ${data.disease_detection.severity} Severity</h4>${data.disease_detection.details.map(d => `<p><strong>${d.name}:</strong> ${d.description}</p>`).join('')}</div>` : ''}
-                <div class="result-card"><h4>Treatment Plan</h4><div class="section-title">Organic Treatments:</div><ul>${data.treatment_recommendations.organic.map(t => `<li>${t}</li>`).join('')}</ul><div class="section-title">Chemical Treatments:</div><ul>${data.treatment_recommendations.chemical.map(t => `<li>${t}</li>`).join('')}</ul></div>`;
+                <div class="result-card result-summary-card-modern">
+                    <h4 class="result-title">Analysis Summary</h4>
+                    <p>${data.summary || 'Summary not available.'}</p>
+                </div>
+                <div class="result-card result-white-card">
+                    <h4 class="result-title severity-red">Overall Health: ${data.health_status}</h4>
+                    <p><strong>Plant Identified as:</strong> ${data.plant_identification || 'Unknown'}</p>
+                </div>
+                ${data.pest_detection?.has_pests ? `
+                <div class="result-card result-white-card">
+                    <h4 class="result-title severity-red">Pest Detected: ${data.pest_detection.severity} Severity</h4>
+                    ${data.pest_detection.details.map(p => `<p><strong>${p.name}:</strong> ${p.description}</p>`).join('')}
+                </div>` : ''}
+                <div class="result-card result-white-card">
+                    <h4 class="result-title severity-red">Disease Detected: ${(data.disease_detection && data.disease_detection.severity) ? data.disease_detection.severity : 'None'} Severity</h4>
+                    ${data.disease_detection && data.disease_detection.details && data.disease_detection.details.length > 0 ? data.disease_detection.details.map(d => `<p><strong>${d.name}:</strong> ${d.description}</p>`).join('') : ''}
+                </div>
+                <div class="result-card treatment-card-modern">
+                    <h4 class="result-title">Treatment Plan</h4>
+                    <div class="section-title organic-title">Organic Treatments:</div>
+                    <ul>${data.treatment_recommendations.organic.map(t => `<li>${t}</li>`).join('')}</ul>
+                    <div class="section-title chemical-title">Chemical Treatments:</div>
+                    <ul>${data.treatment_recommendations.chemical.map(t => `<li>${t}</li>`).join('')}</ul>
+                </div>
+            `;
             analysisSection.classList.remove('hidden');
         };
+    // Modern pest result card styles
+    const style = document.createElement('style');
+    style.innerHTML = `
+    .result-card {
+        border-radius: 16px;
+        margin-bottom: 18px;
+        padding: 1.25rem 1.5rem 1rem 1.5rem;
+        font-size: 1rem;
+    }
+    .result-summary-card-modern {
+        background: linear-gradient(120deg, #e6f4ea 0%, #d1f1d6 100%);
+        border-left: 6px solid #3bb273;
+        color: #1a2e1a;
+        box-shadow: 0 2px 12px 0 rgba(60,180,120,0.07);
+    }
+    .result-white-card {
+        background: #fff;
+        border: 1.5px solid #ececec;
+        color: #222;
+        box-shadow: 0 1px 6px 0 rgba(0,0,0,0.04);
+    }
+    .treatment-card-modern {
+        background: #f7fafc;
+        border-left: 6px solid #60a5fa;
+        color: #1a2e1a;
+        box-shadow: 0 2px 12px 0 rgba(60,180,120,0.04);
+    }
+    .result-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    .severity-red {
+        color: #c00;
+        font-weight: bold;
+    }
+    .section-title {
+        font-weight: 600;
+        margin-top: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+    .organic-title { color: #15803d; }
+    .chemical-title { color: #1d4ed8; }
+    ul { margin: 0 0 0.5rem 1.25rem; }
+    li { margin-bottom: 0.25rem; }
+    `;
+    document.head.appendChild(style);
         
         const displayErrorMessage = (title, message) => {
             document.getElementById('pestAnalysisResults').innerHTML = `<div class="error-message"><h4>❌ ${title}</h4><p>${message}</p></div>`;
@@ -585,6 +651,14 @@ document.addEventListener('DOMContentLoaded', () => {
     langBtnHiDash.addEventListener('click', () => setLanguage('hi'));
 
     // --- Initial Setup ---
+    // Utility: Convert file to base64 string
+    const fileToBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+    });
+
     const initialize = () => {
         renderFeatures();
         renderOverview();
