@@ -11,12 +11,6 @@
 <p align="center">
   <i>An AI-powered smart advisory platform for Indian farmers, providing crop guidance, weather alerts, real-time market prices, and pest detection in local languages.</i>
 </p>
-
-<p align="center">
-  <!-- TODO: Add a screenshot or GIF of your application here! -->
-  <img src="https://via.placeholder.com/800x450.png?text=Kisan+Saathi+Dashboard+Screenshot" alt="Kisan Saathi Application Screenshot" width="800"/>
-</p>
-
 ---
 
 ## ✨ Key Features
