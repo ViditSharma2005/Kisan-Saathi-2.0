@@ -3,3 +3,4 @@ Check file/
 .git/
 node_modules/
 PPT/
+.env

@@ -55,9 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPestDetectionInitialized = false;
     let isWeatherInitialized = false;
     let isAdvisoryInitialized = false;
-    // ADD THIS NEW STATE VARIABLE
     let isProfileInitialized = false;
+    let isMarketInitialized = false;
 
+    // Helper for backend API base URL
+    const API_BASE_URL = window.location.port === '3000' ? '' : 'http://localhost:3000';
 
     // --- Functions ---
     const showDashboard = () => {
@@ -101,10 +103,13 @@ document.addEventListener('DOMContentLoaded', () => {
             activeTab = tab;
             updateTabs();
 
-            // ADD THIS BLOCK TO INITIALIZE THE PROFILE TAB
             if (tab === 'profile' && !isProfileInitialized) {
-                initializeProfileTab(); // This function is in profile.js
+                if (typeof window.initializeProfileTab === 'function') window.initializeProfileTab();
                 isProfileInitialized = true;
+            }
+            if (tab === 'market' && !isMarketInitialized) {
+                if (typeof window.initializeMarketTab === 'function') window.initializeMarketTab();
+                isMarketInitialized = true;
             }
             if (tab === 'pest' && !isPestDetectionInitialized) {
                 initializePestDetection();
@@ -115,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 isWeatherInitialized = true;
             }
             if (tab === 'advisory' && !isAdvisoryInitialized) {
-                initializeAdvisoryChatbot();
+                if (typeof window.initializeChatbot === 'function') window.initializeChatbot(translations);
                 isAdvisoryInitialized = true;
             }
         }
@@ -176,12 +181,29 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         container.querySelectorAll('[data-action-tab]').forEach(card => {
             card.addEventListener('click', () => {
-                activeTab = card.dataset.actionTab;
+                const targetTab = card.dataset.actionTab;
+                if (!targetTab) return;
+                activeTab = targetTab;
                 updateTabs();
-                 // Manually trigger initialization if the profile tab is clicked from the overview
-                if (activeTab === 'profile' && !isProfileInitialized) {
-                    initializeProfileTab();
+                if (targetTab === 'profile' && !isProfileInitialized) {
+                    if (typeof window.initializeProfileTab === 'function') window.initializeProfileTab();
                     isProfileInitialized = true;
+                }
+                if (targetTab === 'market' && !isMarketInitialized) {
+                    if (typeof window.initializeMarketTab === 'function') window.initializeMarketTab();
+                    isMarketInitialized = true;
+                }
+                if (targetTab === 'pest' && !isPestDetectionInitialized) {
+                    initializePestDetection();
+                    isPestDetectionInitialized = true;
+                }
+                if (targetTab === 'weather' && !isWeatherInitialized) {
+                    initializeWeather();
+                    isWeatherInitialized = true;
+                }
+                if (targetTab === 'advisory' && !isAdvisoryInitialized) {
+                    if (typeof window.initializeChatbot === 'function') window.initializeChatbot(translations);
+                    isAdvisoryInitialized = true;
                 }
             });
         });
@@ -236,41 +258,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const errorContainer = document.getElementById('weather-error');
         const dataView = document.getElementById('weather-data-view');
         
-        // FIXED: Use a fresh API key - get yours from openweathermap.org
-        const OPENWEATHER_API_KEY = "d384fe062b21c6fe5b063a4b2400a354"; 
-
-        if (!OPENWEATHER_API_KEY) {
-            loader.classList.add('hidden');
-            errorContainer.classList.remove('hidden');
-            errorContainer.innerHTML = `<h4 data-key="weather_error_apikey_title">API Key Missing</h4><p data-key="weather_error_apikey_desc">Please add your OpenWeatherMap API key to script.js to use the weather feature.</p>`;
-            translatePage();
-            return;
-        }
+        // API key handled securely via backend proxy (.env)
+        const OPENWEATHER_API_KEY = ""; 
 
         navigator.geolocation.getCurrentPosition(async position => {
             const { latitude, longitude } = position.coords;
             
             try {
-                // FIXED: Use the correct free tier API endpoints
-                const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`;
-                const forecastApiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`;
-                
-                // Fetch current weather
-                const weatherResponse = await fetch(weatherApiUrl);
-                if (!weatherResponse.ok) {
-                    if (weatherResponse.status === 401) {
-                        throw new Error('Invalid API key. Please check your OpenWeatherMap API key.');
+                let weatherData, forecastData;
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/weather?lat=${latitude}&lon=${longitude}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        weatherData = data.weatherData;
+                        forecastData = data.forecastData;
                     }
-                    throw new Error(`OpenWeatherMap API error: ${weatherResponse.statusText}`);
+                } catch (proxyErr) {
+                    console.warn('Backend weather proxy unavailable, falling back to direct OpenWeather fetch...');
                 }
-                const weatherData = await weatherResponse.json();
 
-                // Fetch forecast data
-                const forecastResponse = await fetch(forecastApiUrl);
-                if (!forecastResponse.ok) {
-                    throw new Error(`Forecast API error: ${forecastResponse.statusText}`);
+                if (!weatherData || !forecastData) {
+                    const weatherApiUrl = `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`;
+                    const forecastApiUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${latitude}&lon=${longitude}&appid=${OPENWEATHER_API_KEY}&units=metric`;
+                    
+                    const [weatherResponse, forecastResponse] = await Promise.all([
+                        fetch(weatherApiUrl),
+                        fetch(forecastApiUrl)
+                    ]);
+
+                    if (!weatherResponse.ok) {
+                        if (weatherResponse.status === 401) {
+                            throw new Error('Invalid API key. Please check your OpenWeatherMap API key.');
+                        }
+                        throw new Error(`OpenWeatherMap API error: ${weatherResponse.statusText}`);
+                    }
+                    if (!forecastResponse.ok) {
+                        throw new Error(`Forecast API error: ${forecastResponse.statusText}`);
+                    }
+                    weatherData = await weatherResponse.json();
+                    forecastData = await forecastResponse.json();
                 }
-                const forecastData = await forecastResponse.json();
 
                 // Get tomorrow's forecast (24 hours from now)
                 const tomorrow = forecastData.list.find(item => {
@@ -280,30 +307,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     return timeDiff > 18 * 60 * 60 * 1000 && timeDiff < 30 * 60 * 60 * 1000; // Between 18-30 hours
                 }) || forecastData.list[8]; // Fallback to 8th item (roughly 24 hours)
 
-                // Fetch AI advice from Gemini
-                const geminiApiKey = "AIzaSyD8iaASId8LbP-_vwrdO-zyf29umvk3Q7c";
-                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
-                const prompt = `Act as an expert agricultural advisor for an Indian farmer. Based on this weather data for today and tomorrow, provide a JSON response. Today's weather: temperature ${weatherData.main.temp}°C, feels like ${weatherData.main.feels_like}°C, humidity ${weatherData.main.humidity}%, weather is '${weatherData.weather[0].description}'. Tomorrow's forecast: temperature will be around ${tomorrow.main.temp}°C, with '${tomorrow.weather[0].description}'. The JSON response MUST follow this exact schema: { "watering_advice": "string (concise, actionable advice on when and how much to water crops)", "crop_protection_advice": "string (warnings about pests or diseases based on weather)", "harvesting_advice": "string (advice on harvesting activities)", "tomorrow_summary": "string (a simple, one-sentence summary for tomorrow's weather)" }`;
-
-                const geminiRequestBody = {
-                    contents: [{ parts: [{ text: prompt }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-                
+                // Fetch AI advice from backend route
                 let aiAdvice;
                 try {
-                    const geminiResponse = await fetch(geminiApiUrl, { 
+                    const advisoryResponse = await fetch(`${API_BASE_URL}/api/ai/weather-advisory`, { 
                         method: 'POST', 
                         headers: { 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify(geminiRequestBody) 
+                        body: JSON.stringify({ weatherData, tomorrowData: tomorrow }) 
                     });
                     
-                    if (geminiResponse.ok) {
-                        const geminiData = await geminiResponse.json();
-                        const aiAdviceText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-                        if (aiAdviceText) {
-                            aiAdvice = JSON.parse(aiAdviceText);
-                        }
+                    if (advisoryResponse.ok) {
+                        aiAdvice = await advisoryResponse.json();
                     }
                 } catch (geminiError) {
                     console.warn('AI advice unavailable:', geminiError);
@@ -478,20 +492,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const base64Image = await fileToBase64(pestSelectedImage);
-                const apiKey = "AIzaSyD8iaASId8LbP-_vwrdO-zyf29umvk3Q7c";
-                const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-                const prompt = `As an agricultural expert AI for Indian farming, analyze this crop image. Provide a valid JSON response ONLY with the following schema: { "plant_identification": "string", "health_status": "string (Healthy, Low-Severity, High-Severity)", "pest_detection": { "has_pests": "boolean", "severity": "string (None, Low, High)", "details": [{ "name": "string", "description": "string" }] }, "disease_detection": { "has_diseases": "boolean", "severity": "string (None, Low, High)", "details": [{ "name": "string", "description": "string" }] }, "treatment_recommendations": { "organic": ["string"], "chemical": ["string"] }, "summary": "string" }`;
-                const requestBody = {
-                    contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: pestSelectedImage.type, data: base64Image.split(',')[1] } }] }],
-                    generationConfig: { responseMimeType: "application/json" }
-                };
-
-                const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+                const response = await fetch(`${API_BASE_URL}/api/ai/pest-detection`, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ imageBase64: base64Image, mimeType: pestSelectedImage.type }) 
+                });
+                if (!response.ok) throw new Error(`API Error: ${response.statusText || response.status}`);
                 const data = await response.json();
-                const analysisText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if (!analysisText) throw new Error('Invalid API response structure');
-                displayAnalysisResults(JSON.parse(analysisText));
+                displayAnalysisResults(data);
             } catch (error) {
                 console.error('Analysis error:', error);
                 displayErrorMessage('Analysis Failed', error.message);
@@ -600,124 +608,25 @@ document.addEventListener('DOMContentLoaded', () => {
         analyzeAnotherButton.addEventListener('click', resetForNewAnalysis);
     };
 
-    // --- ADVISORY CHATBOT LOGIC ---
+    // --- ADVISORY CHATBOT DELEGATION ---
     const renderAdvisory = () => {
-        const container = document.getElementById('advisory-content');
-        container.innerHTML = `
-        <div class="rounded-lg border bg-white shadow-sm h-[70vh] flex flex-col">
-            <div class="p-4 border-b">
-                <h3 class="text-xl font-bold" data-key="chatbot_title">AI Farming Assistant</h3>
-                <p class="text-sm text-gray-500" data-key="chatbot_subtitle">Ask me anything about farming</p>
-            </div>
-            <div id="chatbot-messages" class="flex-1 p-6 space-y-2 overflow-y-auto">
-                <!-- Messages will be injected here -->
-            </div>
-            <div class="p-4 border-t bg-gray-50">
-                <div id="chatbot-input-container" class="flex items-center gap-2">
-                    <input type="text" id="chatbot-input" class="flex-1 w-full border-gray-300 rounded-lg shadow-sm focus:ring-primary focus:border-primary p-2" placeholder="Ask a question..." data-key-placeholder="chatbot_placeholder" disabled>
-                    <button id="chatbot-send" class="gradient-primary text-white font-medium py-2 px-4 rounded-lg" disabled>Send</button>
-                </div>
-            </div>
-        </div>
-        `;
+        if (typeof window.renderChatbot === 'function') {
+            window.renderChatbot();
+        } else {
+            setTimeout(() => {
+                if (typeof window.renderChatbot === 'function') window.renderChatbot();
+            }, 100);
+        }
     };
 
     const initializeAdvisoryChatbot = () => {
-        const messagesContainer = document.getElementById('chatbot-messages');
-        const input = document.getElementById('chatbot-input');
-        const sendButton = document.getElementById('chatbot-send');
-        let chatHistory = [];
-        const GEMINI_API_KEY = "AIzaSyD8iaASId8LbP-_vwrdO-zyf29umvk3Q7c";
-
-        const addMessage = (sender, message, isHtml = false) => {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.classList.add('chat-message', `chat-message-${sender}`);
-            const contentElement = document.createElement('div');
-            contentElement.classList.add('chat-bubble');
-            if (isHtml) {
-                contentElement.innerHTML = message;
-            } else {
-                contentElement.textContent = message;
-            }
-            messageWrapper.appendChild(contentElement);
-            messagesContainer.appendChild(messageWrapper);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            return messageWrapper;
-        };
-
-        const displayWelcomeMessage = () => {
-            const welcomeKey = 'chatbot_welcome';
-            const welcomeText = translations[welcomeKey] || "Hello! I am your AI Farming Assistant. Ask me anything about crops, soil, pests, or market prices.";
-            addMessage('ai', welcomeText);
-            input.disabled = false;
-            sendButton.disabled = false;
-            input.focus();
-        };
-
-        const handleSend = async () => {
-            const userMessage = input.value.trim();
-            if (!userMessage) return;
-
-            addMessage('user', userMessage);
-            input.value = '';
-            input.disabled = true;
-            sendButton.disabled = true;
-
-            const typingIndicator = addMessage('ai', '<div class="typing-indicator"><span></span><span></span><span></span></div>', true);
-
-            if (!GEMINI_API_KEY) {
-                const errorKey = 'chatbot_error_apikey';
-                const errorText = translations[errorKey] || "AI Chatbot is unavailable. Please configure the API Key.";
-                typingIndicator.querySelector('.chat-bubble').innerHTML = errorText;
-                return;
-            }
-
-            try {
-                const systemInstruction = `You are "Kisan Saathi," an expert AI agricultural advisor for Indian farmers. Provide concise, helpful, and easy-to-understand advice. Keep the conversation history in mind.`;
-                chatHistory.push({ role: "user", parts: [{ text: userMessage }] });
-
-                const geminiApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
-                const requestBody = {
-                    contents: chatHistory,
-                    systemInstruction: { parts: [{ text: systemInstruction }] }
-                };
-
-                const response = await fetch(geminiApiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) });
-
-                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
-
-                const data = await response.json();
-                const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                typingIndicator.remove();
-
-                if (aiResponse) {
-                    addMessage('ai', aiResponse);
-                    chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
-                } else {
-                    addMessage('ai', 'Sorry, I could not process your request.');
-                }
-
-            } catch (error) {
-                typingIndicator.remove();
-                addMessage('ai', `An error occurred: ${error.message}`);
-                console.error("Chatbot error:", error);
-            } finally {
-                input.disabled = false;
-                sendButton.disabled = false;
-                input.focus();
-            }
-        };
-
-        sendButton.addEventListener('click', handleSend);
-        input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleSend();
-            }
-        });
-
-        displayWelcomeMessage();
-        translatePage(); // To apply placeholder text
+        if (typeof window.initializeChatbot === 'function') {
+            window.initializeChatbot(translations);
+        } else {
+            setTimeout(() => {
+                if (typeof window.initializeChatbot === 'function') window.initializeChatbot(translations);
+            }, 100);
+        }
     };
 
     
@@ -738,6 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             translations = await response.json();
+            window.translations = translations;
             translatePage();
         } catch (error) {
             console.error('Error fetching translations:', error);
@@ -759,6 +669,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+    window.translatePage = translatePage;
     
     // Set language and update UI
     const setLanguage = (lang) => {
